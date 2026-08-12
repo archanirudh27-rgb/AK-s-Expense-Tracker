@@ -1,0 +1,9 @@
+{
+  "name": "AK's Expense Tracker",
+  "short_name": "AK Expenses",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#20241d",
+  "description": "AK's personal cloud expense tracker"
+}
