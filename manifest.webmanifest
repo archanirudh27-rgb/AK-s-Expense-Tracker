@@ -1,9 +1,9 @@
 {
-  "name": "AK's Expense Tracker",
-  "short_name": "AK Expenses",
+  "name": "AK FinTrack",
+  "short_name": "AK FinTrack",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#20241d",
-  "description": "AK's personal cloud expense tracker"
+  "description": "Personal Finance · Cash Flow · Planning"
 }
