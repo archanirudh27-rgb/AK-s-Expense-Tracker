@@ -1,4 +1,4 @@
-const CACHE_NAME='ak-fintrack-pwa-v11';
+const CACHE_NAME='ak-fintrack-pwa-v12';
 const SHELL=['./','./index.html','./manifest.webmanifest','./config.js','./icon-192.svg','./icon-512.svg','./settings-overlay.js','./hide-budget.js','./investment-overlay.js','./income.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
