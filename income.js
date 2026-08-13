@@ -1,9 +1,9 @@
 (function(){
 const INCOME='Income';
 const TYPES=['Salary','Freelance / Professional','Business','Bonus','Interest','Rental Income','Other Income'];
-function incomeRows(){return (window.rows||[]).filter(x=>x.category===INCOME)}
+function incomeRows(){return rows.filter(x=>x.category===INCOME)}
 function incomePage(){
- const a=incomeRows().sort((x,y)=>String(y.date).localeCompare(String(x.date))),m=window.month||monthOf(new Date());
+ const a=incomeRows().sort((x,y)=>String(y.date).localeCompare(String(x.date))),m=month||monthOf(new Date());
  const cur=a.filter(x=>monthOf(x.date)===m),total=cur.reduce((s,x)=>s+Number(x.amount),0);
  return '<div class="card"><div class="row"><div><div class="section">Income</div><div class="muted">Log money received separately from expenses.</div></div><button class="btn gold" onclick="incomeAdd()">+ Add income</button></div><div class="grid kpis" style="margin-top:12px"><div class="card"><div class="label">This month</div><div class="value">'+money(total)+'</div></div><div class="card"><div class="label">Transactions</div><div class="value">'+cur.length+'</div></div></div></div>'+
  '<div class="card"><div class="section">'+monthLabel(m)+'</div>'+(cur.length?'<div class="tablewrap"><table class="table"><thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th></th></tr></thead><tbody>'+cur.map(x=>'<tr><td>'+esc(x.date)+'</td><td>'+esc(x.subcategory)+'</td><td>'+esc(x.description||'—')+'</td><td>'+money(x.amount)+'</td><td><button class="btn danger" style="padding:4px 7px" onclick="incomeDelete(\''+x.id+'\')">×</button></td></tr>').join('')+'</tbody></table></div>':'<div class="empty">No income logged for this month.</div>')+'</div>';
@@ -19,7 +19,7 @@ let patched=false;
 function patchIncome(){if(patched||typeof window.render!=='function'||typeof window.nav!=='function')return;
  const oldMonthly=window.monthly;window.monthly=function(m){return oldMonthly(m).filter(x=>x.category!==INCOME)};
  const oldNav=window.nav;window.nav=function(){let s=oldNav();s=s.replace("['analysis','◒','Analysis'],['forecast','↗','Forecast']","['analysis','◒','Analysis'],['income','₹','Income'],['forecast','↗','Forecast']");return s.replace("['forecast','Forecast'],['settings','Settings']","['forecast','Forecast'],['income','Income'],['settings','Settings']")};
- const oldRender=window.render;window.render=function(){if(window.page==='income'){document.body.innerHTML='<div class="app"><div class="top"><div class="brand">AK FinTrack</div><div class="sub">Personal Finance · Cash Flow · Planning</div></div>'+window.nav()+'<main class="main">'+incomePage()+'</main></div>';if(typeof themeButton==='function')themeButton();if(typeof mobileSettingsButton==='function')mobileSettingsButton();return}oldRender()};
+ const oldRender=window.render;window.render=function(){if(page==='income'){document.body.innerHTML='<div class="app"><div class="top"><div class="brand">AK FinTrack</div><div class="sub">Personal Finance · Cash Flow · Planning</div></div>'+window.nav()+'<main class="main">'+incomePage()+'</main></div>';if(typeof themeButton==='function')themeButton();if(typeof mobileSettingsButton==='function')mobileSettingsButton();return}oldRender()};
  patched=true;
 }
 setInterval(patchIncome,250);setTimeout(patchIncome,100);
