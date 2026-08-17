@@ -32,4 +32,5 @@
   window.forecast=forecast;
   function start(){cleanUI();new MutationObserver(function(){cleanUI()}).observe(document.documentElement,{childList:true,subtree:true});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+  var fs=document.createElement('script');fs.src='./forecast.js?v=21';document.head.appendChild(fs);
 })();
