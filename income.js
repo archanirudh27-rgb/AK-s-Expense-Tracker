@@ -10,6 +10,24 @@ function openIncome(){
 function renderIncomeList(){const el=document.getElementById('income-list');if(!el||typeof rows==='undefined')return;const m=typeof month!=='undefined'?month:monthOf(new Date());const a=rows.filter(x=>x.category==='Income'&&monthOf(x.date)===m).sort((x,y)=>String(y.date).localeCompare(String(x.date)));el.innerHTML=a.length?a.map(x=>'<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><span>'+esc(x.date)+' · '+esc(x.subcategory)+'</span><b>₹'+Math.round(Number(x.amount)).toLocaleString('en-IN')+'</b></div>').join(''):'No income logged this month.'}
 async function saveIncome(){const amount=Number(document.getElementById('income-amount').value);if(!amount||amount<=0){alert('Enter a valid income amount.');return}const r=await sb.from('expenses').insert({user_id:user.id,date:document.getElementById('income-date').value,amount,category:'Income',subcategory:document.getElementById('income-type').value,description:document.getElementById('income-desc').value,payment_mode:null});if(r.error){alert(r.error.message);return}await load();openIncome()}
 function addIncomeNav(){if(!document.querySelector('.bottom')&&!document.querySelector('.nav'))return;document.querySelectorAll('.ak-income-nav').forEach(x=>x.remove());const bottom=document.querySelector('.bottom');if(bottom){const b=document.createElement('button');b.className='ak-income-nav';b.innerHTML='<span>₹</span><span>Income</span>';b.onclick=openIncome;bottom.insertBefore(b,bottom.lastElementChild)}const nav=document.querySelector('.nav');if(nav){const b=document.createElement('button');b.className='ak-income-nav';b.textContent='Income';b.onclick=openIncome;nav.appendChild(b)}}
-const oldRender=window.render;let lastRoot='';function watch(){addIncomeNav();if(document.body.innerHTML.length!==lastRoot){lastRoot=document.body.innerHTML;setTimeout(addIncomeNav,0)}}
+let lastRoot='';function watch(){addIncomeNav();if(document.body.innerHTML.length!==lastRoot){lastRoot=document.body.innerHTML;setTimeout(addIncomeNav,0)}}
 window.openIncome=openIncome;setInterval(watch,700);setTimeout(addIncomeNav,300);
+
+/* Keep Income and Investments out of Home expenditure KPIs without removing them from Transactions/Income views. */
+let expenditureHomePatched=false;
+function patchExpenditureHome(){
+ if(expenditureHomePatched||typeof window.home!=='function'||typeof window.monthly!=='function')return;
+ const originalHome=window.home;
+ window.home=function(){
+   const originalMonthly=window.monthly;
+   window.monthly=function(m){
+     const all=originalMonthly(m);
+     return all.filter(x=>x.category!=='Income'&&x.category!=='Investment');
+   };
+   try{return originalHome.apply(this,arguments)}finally{window.monthly=originalMonthly}
+ };
+ expenditureHomePatched=true;
+}
+setInterval(patchExpenditureHome,500);
+setTimeout(patchExpenditureHome,1000);
 })();
