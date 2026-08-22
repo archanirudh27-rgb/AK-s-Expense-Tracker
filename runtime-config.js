@@ -215,3 +215,76 @@ window.EXPENSE_APP_CONFIG={SUPABASE_URL:'https://mqsvpkbgsjsstzaeupwz.supabase.c
     if(installLayoutV32()||tries>240)clearInterval(timer);
   },25);
 })();
+
+(function(){
+  let cloudOverrides={};
+  let patched=false;
+  let busy=false;
+  let syncCount=0;
+
+  function readMap(key){try{return JSON.parse(localStorage.getItem(key)||'{}')}catch(e){return{}}}
+  function localMap(id){return Object.assign({},readMap('ak_expense_types_'+id),readMap('fintrack_types_'+id))}
+  function writeLocal(id,map){
+    const data=JSON.stringify(map||{});
+    localStorage.setItem('ak_expense_types_'+id,data);
+    localStorage.setItem('fintrack_types_'+id,data);
+  }
+  function currentUser(){try{return (typeof user!=='undefined'&&user)?user:null}catch(e){return null}}
+
+  async function persistCloud(map){
+    const u=currentUser();
+    if(!u||typeof sb==='undefined'||!sb)return false;
+    try{
+      const r=await sb.from('settings').upsert({user_id:u.id,overrides:map||{}},{onConflict:'user_id'});
+      return !r.error;
+    }catch(e){return false}
+  }
+
+  function installCloudTypeMap(){
+    try{
+      if(patched)return true;
+      if(!window.__fintrackTypeCompatInstalled||typeof typeMap!=='function'||typeof saveTypeMap!=='function')return false;
+      const previousTypeMap=typeMap;
+      const previousSaveTypeMap=saveTypeMap;
+      typeMap=function(){return Object.assign({},cloudOverrides,previousTypeMap())};
+      saveTypeMap=function(map){
+        previousSaveTypeMap(map);
+        cloudOverrides=Object.assign({},cloudOverrides,map||{});
+        persistCloud(cloudOverrides);
+      };
+      patched=true;
+      return true;
+    }catch(e){return false}
+  }
+
+  async function syncCloudOverrides(){
+    if(busy)return false;
+    const u=currentUser();
+    if(!u||typeof sb==='undefined'||!sb)return false;
+    if(!installCloudTypeMap())return false;
+    busy=true;
+    try{
+      const local=localMap(u.id);
+      const before=JSON.stringify(typeMap());
+      const r=await sb.from('settings').select('overrides').eq('user_id',u.id).maybeSingle();
+      if(r.error){busy=false;return false}
+      const cloud=(r.data&&r.data.overrides&&typeof r.data.overrides==='object')?r.data.overrides:{};
+      const merged=Object.assign({},cloud,local);
+      cloudOverrides=merged;
+      writeLocal(u.id,merged);
+      if(JSON.stringify(cloud)!==JSON.stringify(merged))await persistCloud(merged);
+      const after=JSON.stringify(typeMap());
+      busy=false;
+      if(before!==after&&typeof render==='function')render();
+      return true;
+    }catch(e){busy=false;return false}
+  }
+
+  const timer=setInterval(async function(){
+    syncCount++;
+    const ok=await syncCloudOverrides();
+    if((ok&&syncCount>=6)||syncCount>30)clearInterval(timer);
+  },500);
+  window.addEventListener('focus',syncCloudOverrides);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)syncCloudOverrides()});
+})();
