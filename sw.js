@@ -1,5 +1,5 @@
-const CACHE_NAME='fintrack-pwa-v24';
-const SHELL=['./','./index.html','./manifest.webmanifest?v=24','./config.js','./fintrack-icon-192.svg?v=24','./fintrack-icon-512.svg?v=24','./latest-ui.js','./forecast.js','./settings-overlay.js','./hide-budget.js','./investment-overlay.js','./income.js'];
+const CACHE_NAME='fintrack-pwa-v25';
+const SHELL=['./','./index.html','./manifest.webmanifest?v=25','./config.js','./fintrack-icon-192.svg?v=25','./fintrack-icon-512.svg?v=25','./latest-ui.js','./forecast.js','./investment-overlay.js','./income.js'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('message',event=>{if(event.data&&event.data.type==='SKIP_WAITING')self.skipWaiting()});
