@@ -288,3 +288,21 @@ window.EXPENSE_APP_CONFIG={SUPABASE_URL:'https://mqsvpkbgsjsstzaeupwz.supabase.c
   window.addEventListener('focus',syncCloudOverrides);
   document.addEventListener('visibilitychange',function(){if(!document.hidden)syncCloudOverrides()});
 })();
+
+(function(){
+  function applyBurntOrangeAccent(){
+    if(document.getElementById('fintrack-accent-v34'))return;
+    const style=document.createElement('style');
+    style.id='fintrack-accent-v34';
+    style.textContent=`
+      :root{--gold:#B56E3B!important;--gold2:#C48357!important}
+      body.dark{--gold:#B56E3B!important;--gold2:#C48357!important}
+      .btn.gold{background:#B56E3B!important;color:#fff!important}
+      .btn.gold:hover{background:#9C5A2F!important}
+      .progress i{background:#B56E3B!important}
+      .bottom button.active{color:#B56E3B!important}
+    `;
+    document.head.appendChild(style);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyBurntOrangeAccent,{once:true});else applyBurntOrangeAccent();
+})();
