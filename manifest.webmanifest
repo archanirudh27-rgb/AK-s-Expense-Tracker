@@ -2,7 +2,7 @@
   "name": "FinTrack",
   "short_name": "FinTrack",
   "description": "Personal Finance · Cash Flow · Planning",
-  "id": "./fintrack",
+  "id": "./",
   "start_url": "./?pwa=29",
   "scope": "./",
   "display": "standalone",
