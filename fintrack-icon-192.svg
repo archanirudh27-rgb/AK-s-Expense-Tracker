@@ -1,1 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101310"/><stop offset="1" stop-color="#242820"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3c766"/><stop offset=".55" stop-color="#d6a33f"/><stop offset="1" stop-color="#a96f18"/></linearGradient></defs><rect width="192" height="192" rx="42" fill="url(#bg)"/><rect x="7" y="7" width="178" height="178" rx="36" fill="none" stroke="#3a3e37" stroke-width="2"/><path d="M58 42h83l-13 20H84v23h38l-13 19H84v47l-26 18V42z" fill="url(#gold)"/><path d="M84 85h38l-13 19H84z" fill="#f7d477" opacity=".42"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="18" y1="14" x2="170" y2="178" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#242923"/>
+      <stop offset="0.55" stop-color="#171b17"/>
+      <stop offset="1" stop-color="#0d100d"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="58" y1="40" x2="132" y2="160" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E39A68"/>
+      <stop offset="0.28" stop-color="#C77D49"/>
+      <stop offset="0.62" stop-color="#B56E3B"/>
+      <stop offset="1" stop-color="#8E4B2A"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="68" y1="42" x2="126" y2="150" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F1B487"/>
+      <stop offset="0.45" stop-color="#C98252"/>
+      <stop offset="1" stop-color="#7A3F24"/>
+    </linearGradient>
+    <filter id="panelShadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+    <filter id="fShadow" x="-40%" y="-30%" width="190%" height="190%">
+      <feDropShadow dx="3" dy="7" stdDeviation="4" flood-color="#000" flood-opacity="0.72"/>
+    </filter>
+  </defs>
+  <g filter="url(#panelShadow)">
+    <rect x="8" y="8" width="176" height="176" rx="40" fill="url(#bg)"/>
+    <rect x="10" y="10" width="172" height="172" rx="38" fill="none" stroke="#323831" stroke-width="3"/>
+    <path d="M18 61Q18 18 61 18H131Q174 18 174 61" fill="none" stroke="#495048" stroke-width="2" opacity=".45"/>
+  </g>
+  <path d="M62 48h81l-13 21H88v24h36l-12 19H88v46l-26 19V48z" fill="#69371F" opacity=".9" transform="translate(4 6)"/>
+  <path d="M62 48h81l-13 21H88v24h36l-12 19H88v46l-26 19V48z" fill="url(#orange)" filter="url(#fShadow)"/>
+  <path d="M64 50h76l-5 8H82v43h35l-4 7H82v45l-8 6V59H64z" fill="url(#edge)" opacity=".5"/>
+  <path d="M62 48h81l-13 21H88" fill="none" stroke="#F0B082" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
+</svg>
