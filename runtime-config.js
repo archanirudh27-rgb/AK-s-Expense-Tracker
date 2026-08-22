@@ -170,3 +170,48 @@ window.EXPENSE_APP_CONFIG={SUPABASE_URL:'https://mqsvpkbgsjsstzaeupwz.supabase.c
     if((a&&b)||tries>240)clearInterval(timer);
   },25);
 })();
+
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+    body.dark .notice{background:#2b2416!important;border-color:#6f552a!important;color:#f6e7c8!important}
+    body.dark .notice.ok{background:#17301f!important;border-color:#315c3b!important;color:#d9f0dd!important}
+    body.dark .notice.err{background:#351c1b!important;border-color:#6b3632!important;color:#f4d6d2!important}
+  `;
+  document.head.appendChild(style);
+
+  function installLayoutV32(){
+    try{
+      if(window.__fintrackLayoutV32)return true;
+      if(typeof nav!=='function'||typeof settings!=='function'||typeof home!=='function'||typeof render!=='function')return false;
+
+      const previousSettings=settings;
+      const previousHome=home;
+
+      nav=function(){
+        const items=[['home','Home'],['add','Add Expense'],['tx','Transactions'],['forecast','Forecast'],['settings','More']];
+        const mobile=[['home','⌂','Home'],['tx','≡','Txns'],['add','＋','Add'],['forecast','↗','Forecast'],['settings','⚙','More']];
+        return '<div class="nav">'+items.map(x=>'<button class="'+(page===x[0]?'active':'')+'" onclick="go(\''+x[0]+'\')">'+x[1]+'</button>').join('')+'</div><div class="bottom">'+mobile.map(x=>'<button class="'+(page===x[0]?'active':'')+(x[0]==='add'?' add':'')+'" onclick="go(\''+x[0]+'\')"><span>'+x[1]+'</span><span>'+x[2]+'</span></button>').join('')+'</div>';
+      };
+
+      home=function(){
+        return previousHome().replace(/<button class="btn secondary" onclick="go\('income'\)">\+ Add income<\/button>/,'');
+      };
+
+      settings=function(){
+        const incomeShortcut='<div class="card"><div class="section">More</div><p class="muted">Occasional actions and account tools.</p><div class="actions" style="margin-top:12px"><button class="btn gold" onclick="go(\'income\')">₹ Log income</button></div></div>';
+        return incomeShortcut+previousSettings();
+      };
+
+      window.__fintrackLayoutV32=true;
+      if(typeof user!=='undefined'&&user)render();
+      return true;
+    }catch(e){return false}
+  }
+
+  let tries=0;
+  const timer=setInterval(function(){
+    tries++;
+    if(installLayoutV32()||tries>240)clearInterval(timer);
+  },25);
+})();
