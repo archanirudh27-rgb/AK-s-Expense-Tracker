@@ -1,4 +1,7 @@
 (function(){
+/* Prevent the legacy Home layout flashing before the final pie-only dashboard is decorated. */
+(function(){if(!document.getElementById('fintrack-home-stable-boot')){const s=document.createElement('style');s.id='fintrack-home-stable-boot';s.textContent='main.main{visibility:hidden!important}';document.head.appendChild(s)}})();
+function revealMain(){document.getElementById('fintrack-home-stable-boot')?.remove()}
 function m(n){try{return typeof money==='function'?money(n):'₹'+Math.round(Number(n)||0).toLocaleString('en-IN')}catch(e){return '₹'+Math.round(Number(n)||0).toLocaleString('en-IN')}}
 function snap(x){return x&&x.category==='Balance Snapshot'}
 function latest(){return (rows||[]).filter(snap).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||new Date(b.created_at||0)-new Date(a.created_at||0))[0]||null}
@@ -11,7 +14,7 @@ function chartCard(){try{const a=monthly(month),cats={};a.forEach(x=>{if(!snap(x
 function removeDuplicateCategoryPanel(main){const top=[...main.querySelectorAll('.card')].find(el=>/Top categories/i.test(el.textContent||''));if(!top)return;const grid=top.parentElement;if(grid&&grid.classList.contains('grid'))grid.remove();else top.remove()}
 function addChart(){if(typeof page!=='undefined'&&page!=='home')return;const main=document.querySelector('main.main');if(!main)return;removeDuplicateCategoryPanel(main);if(document.getElementById('moneyGoChart'))return;const temp=document.createElement('div');temp.innerHTML=chartCard();const card=temp.firstElementChild;if(!card)return;const savings=[...main.querySelectorAll('.card.hero')].find(el=>/Available Savings/i.test(el.textContent||''));if(savings)main.insertBefore(card,savings);else main.appendChild(card)}
 function css(){if(document.getElementById('fintrackChartCss'))return;const s=document.createElement('style');s.id='fintrackChartCss';s.textContent='@media(max-width:620px){.fintrack-chart-grid{grid-template-columns:1fr!important;gap:12px!important}}';document.head.appendChild(s)}
-function decorate(){css();addChart();addButton()}
-function install(){if(window.__audit42chart51)return true;if(typeof render!=='function')return false;const r=render;render=function(){const o=r.apply(this,arguments);setTimeout(decorate,20);return o};window.__audit42chart51=true;setTimeout(decorate,50);return true}
-let n=0,t=setInterval(()=>{n++;if(install()||n>240)clearInterval(t)},25);
+function decorate(){try{css();addChart();addButton()}finally{revealMain()}}
+function install(){if(window.__audit42chart52)return true;if(typeof render!=='function')return false;const r=render;render=function(){const o=r.apply(this,arguments);decorate();return o};window.__audit42chart52=true;decorate();return true}
+let n=0,t=setInterval(()=>{n++;if(install()||n>240){clearInterval(t);if(n>240)revealMain()}},25);
 })();
