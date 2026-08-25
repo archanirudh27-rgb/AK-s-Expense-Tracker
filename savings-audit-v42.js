@@ -8,3 +8,14 @@ function modal(){const d=auditData();if(!d){alert('Set or reconcile your current
 function addButton(){if(typeof page!=='undefined'&&page!=='home')return;const main=document.querySelector('main.main');if(!main||document.getElementById('auditBtn42'))return;document.getElementById('auditBtn41')?.remove();const savings=[...main.querySelectorAll('.card.hero')].find(el=>/Available Savings/i.test(el.textContent||''));if(!savings)return;const b=document.createElement('button');b.id='auditBtn42';b.className='btn secondary';b.style.marginTop='12px';b.textContent='Audit Savings Calculation';b.onclick=modal;savings.appendChild(b)}
 function install(){if(window.__audit42)return true;if(typeof render!=='function')return false;const r=render;render=function(){const o=r.apply(this,arguments);setTimeout(addButton,20);return o};window.__audit42=true;setTimeout(addButton,50);return true}let n=0,t=setInterval(()=>{n++;if(install()||n>200)clearInterval(t)},25);
 })();
+
+/* v49: chart is loaded through the same direct runtime chain as Savings Audit.
+   This avoids depending on service-worker HTML/runtime rewriting. */
+(function(){
+  if(document.getElementById('fintrack-home-chart-direct'))return;
+  const s=document.createElement('script');
+  s.id='fintrack-home-chart-direct';
+  s.src='./home-chart-v45.js?v=49';
+  s.async=false;
+  document.head.appendChild(s);
+})();
