@@ -32,3 +32,59 @@ window.EXPENSE_APP_CONFIG={SUPABASE_URL:'https://mqsvpkbgsjsstzaeupwz.supabase.c
   let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>300)clearInterval(timer)},20);
   setInterval(()=>{if(installed)syncCloud()},15000);
 })();
+
+/* Phase 1 Analysis freeze: accurate like-for-like history and projection rules. */
+(function(){
+  let done=false;
+  function install(){
+    if(done)return true;
+    if(typeof forecast!=='function'||typeof monthly!=='function'||typeof typeFor!=='function'||typeof pieCard!=='function'||typeof byCat!=='function'||typeof byType!=='function'||typeof moveMonth!=='function'||typeof monthOf!=='function'||typeof monthLabel!=='function'||typeof total!=='function'||typeof ordinary!=='function')return false;
+    const currentMonth=()=>monthOf(new Date().toISOString().slice(0,10));
+    const hasSpend=m=>monthly(m).length>0;
+    const sumType=(a,t)=>a.filter(x=>typeFor(x)===t).reduce((s,x)=>s+Number(x.amount||0),0);
+    const weighted=vals=>{const w=[.5,.3,.2];let s=0,d=0;vals.forEach((v,i)=>{if(v!==null&&v!==undefined){s+=Number(v||0)*w[i];d+=w[i]}});return d?s/d:0};
+    const periodText=(cur,prev,label)=>{if(!prev&&prev!==0)return `${label} does not yet have a comparable earlier period.`;if(prev===0)return cur?`${label} has recorded spending, while the comparable earlier period has no recorded expenses.`:`No spending is recorded in either comparable period.`;const diff=cur-prev,pct=Math.round(Math.abs(diff)/prev*100);return `${label} spending is ${money(Math.abs(diff))} (${pct}%) ${diff>=0?'higher':'lower'} than the comparable earlier period.`};
+    const monthsFrom=(year,start,count)=>Array.from({length:count},(_,i)=>year+'-'+String(start+i).padStart(2,'0'));
+    const rowsFor=ms=>{const set=new Set(ms);return rows.filter(x=>ordinary(x)&&set.has(monthOf(x.date)))};
+
+    monthlyAnalysis=function(){
+      const cm=currentMonth(),m1=moveMonth(cm,-1),m2=moveMonth(cm,-2),m3=moveMonth(cm,-3),a1=monthly(m1),a2=monthly(m2),a3=monthly(m3),e1=total(a1),e2=total(a2),cats=byCat(a1),types=byType(a1);
+      let insight='';
+      if(!a1.length){const cur=monthly(cm);insight=`No expenses are recorded for ${monthLabel(m1)}, so a genuine previous-month comparison is not available yet.`+(cur.length?` ${monthLabel(cm)} currently has ${money(total(cur))} recorded; this will become the first completed-month baseline once the month closes.`:'');}
+      else{insight=periodText(e1,a2.length?e2:null,monthLabel(m1));const largest=cats[0];if(largest)insight+=` Largest category was ${esc(largest[0])} at ${money(largest[1])}.`;const controllable=(types['Non-Recurring']||0)+(types['Uncertain']||0);if(controllable)insight+=` ${money(controllable)} was non-recurring or uncertain, which is the main area to review for potential savings.`;}
+      const chart=a1.length?pieCard('Last month · Where did my money go?',monthLabel(m1),cats):pieCard('Current month preview · Where is my money going?',monthLabel(cm)+' · month to date',byCat(monthly(cm)));
+      return`${chart}<div class="card insight"><div class="section">What changed?</div><p>${insight}</p></div><div class="card"><div class="section">Three completed months</div><div class="tablewrap"><table class="table"><thead><tr><th>Month</th><th>Expenses</th><th>Fixed</th><th>Variable</th><th>Non-recurring</th><th>Uncertain</th></tr></thead><tbody>${[[m3,a3],[m2,a2],[m1,a1]].map(([mm,a])=>{const t=byType(a);return`<tr><td>${monthLabel(mm)}</td><td>${money(total(a))}</td><td>${money(t['Fixed Recurring']||0)}</td><td>${money(t['Variable Recurring']||0)}</td><td>${money(t['Non-Recurring']||0)}</td><td>${money(t['Uncertain']||0)}</td></tr>`}).join('')}</tbody></table></div></div>`;
+    };
+
+    quarterAnalysis=function(){
+      const d=new Date(),y=d.getFullYear(),q=Math.floor(d.getMonth()/3)+1,start=(q-1)*3+1,elapsed=d.getMonth()+1-start+1,ms=monthsFrom(y,start,elapsed),pq=q===1?4:q-1,py=q===1?y-1:y,pstart=(pq-1)*3+1,pms=monthsFrom(py,pstart,elapsed),a=rowsFor(ms),pa=rowsFor(pms),e=total(a),pe=total(pa),avg=elapsed?e/elapsed:0;
+      return`<div class="grid kpis"><div class="card"><div class="label">Q${q} ${y} spend to date</div><div class="value">${money(e)}</div></div><div class="card"><div class="label">Average / elapsed month</div><div class="value">${money(avg)}</div></div></div>${pieCard('Quarter category mix',`Q${q} ${y} · ${elapsed}/3 calendar months elapsed`,byCat(a))}<div class="card insight"><div class="section">Quarter insight</div><p>${periodText(e,pa.length?pe:null,`Q${q} ${y}`)} Comparison uses the same ${elapsed} month${elapsed===1?'':'s'} of the previous quarter, not a partial quarter against a full one.</p></div>`;
+    };
+
+    halfAnalysis=function(){
+      const d=new Date(),y=d.getFullYear(),h=d.getMonth()<6?1:2,start=h===1?1:7,elapsed=d.getMonth()+1-start+1,ms=monthsFrom(y,start,elapsed),py=h===1?y-1:y,pstart=h===1?7:1,pms=monthsFrom(py,pstart,elapsed),a=rowsFor(ms),pa=rowsFor(pms),e=total(a);
+      return`<div class="grid kpis"><div class="card"><div class="label">H${h} ${y} spend to date</div><div class="value">${money(e)}</div></div><div class="card"><div class="label">Average / elapsed month</div><div class="value">${money(elapsed?e/elapsed:0)}</div></div></div>${pieCard('Half-year category mix',`H${h} ${y} · ${elapsed}/6 calendar months elapsed`,byCat(a))}<div class="card insight"><div class="section">Half-year insight</div><p>${periodText(e,pa.length?total(pa):null,`H${h} ${y}`)} Comparison is like-for-like across the same number of elapsed months.</p></div>`;
+    };
+
+    annualAnalysis=function(){
+      const d=new Date(),y=d.getFullYear(),elapsed=d.getMonth()+1,ms=monthsFrom(y,1,elapsed),pms=monthsFrom(y-1,1,elapsed),a=rowsFor(ms),pa=rowsFor(pms),e=total(a);
+      return`<div class="grid kpis"><div class="card"><div class="label">${y} spend to date</div><div class="value">${money(e)}</div></div><div class="card"><div class="label">Average / elapsed month</div><div class="value">${money(elapsed?e/elapsed:0)}</div></div></div>${pieCard('Annual category mix',`${y} · Jan to ${new Date(y,elapsed-1,1).toLocaleDateString('en-IN',{month:'short'})}`,byCat(a))}<div class="card insight"><div class="section">Annual insight</div><p>${periodText(e,pa.length?total(pa):null,'Year-to-date')} The comparison uses Jan through the same calendar month last year.</p></div>`;
+    };
+
+    projectionAnalysis=function(){
+      const cm=currentMonth(),histMonths=[moveMonth(cm,-1),moveMonth(cm,-2),moveMonth(cm,-3)],hist=histMonths.map(m=>monthly(m)),recentMonths=[cm,...histMonths.slice(0,2)],recentSet=new Set(recentMonths),fixedRows=rows.filter(x=>ordinary(x)&&recentSet.has(monthOf(x.date))&&typeFor(x)==='Fixed Recurring').slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||new Date(b.created_at||0)-new Date(a.created_at||0)),latestFixed={};
+      fixedRows.forEach(x=>{const k=key(x);if(!latestFixed[k])latestFixed[k]=x});
+      const fixed=Object.values(latestFixed).reduce((s,x)=>s+Number(x.amount||0),0),completedWithData=hist.filter(a=>a.length>0),varHist=hist.map(a=>a.length?sumType(a,'Variable Recurring'):null),uncHist=hist.map(a=>a.length?sumType(a,'Uncertain'):null),cur=monthly(cm),vari=completedWithData.length?weighted(varHist):sumType(cur,'Variable Recurring'),unc=completedWithData.length?weighted(uncHist):sumType(cur,'Uncertain'),lastBase=hist[0].length?hist[0]:cur,nonBase=sumType(lastBase,'Non-Recurring'),core=fixed+vari,withUnc=core+unc,confidence=completedWithData.length>=3?'High':completedWithData.length===2?'Moderate':completedWithData.length===1?'Limited':'Low',items=[['Fixed Recurring',fixed],['Variable Recurring',vari],['Uncertain',unc]].filter(x=>x[1]>0);
+      let insight=`Next month core expected spend is ${money(core)}. Fixed recurring commitments contribute ${money(fixed)} and use the most recent known amount for each fixed item, including the current month, so a fixed EMI is not averaged down.`;
+      insight+=completedWithData.length?` Variable recurring is estimated from ${completedWithData.length} completed month${completedWithData.length===1?'':'s'} using recent-history weighting.`:` There are no completed historical months yet, so variable and uncertain estimates currently use this month's recorded spending as a provisional baseline.`;
+      if(unc)insight+=` Adding uncertain spending gives a working upper projection of about ${money(withUnc)}.`;
+      if(nonBase)insight+=` ${money(nonBase)} of non-recurring spend is shown separately as a potential savings opportunity rather than assumed to repeat.`;
+      return`<div class="grid kpis"><div class="card"><div class="label">Next month core expected</div><div class="value">${money(core)}</div></div><div class="card"><div class="label">Including uncertainty</div><div class="value">${money(withUnc)}</div></div><div class="card"><div class="label">Potential savings opportunity</div><div class="value">${money(nonBase)}</div></div><div class="card"><div class="label">Next 3 months core</div><div class="value">${money(core*3)}</div></div><div class="card"><div class="label">Next 12 months core</div><div class="value">${money(core*12)}</div></div><div class="card"><div class="label">Projection confidence</div><div class="value">${confidence}</div></div></div>${pieCard('Next month projection mix','Fixed + variable + uncertainty',items)}<div class="card insight"><div class="section">What to expect?</div><p>${insight}</p></div><div class="notice">Projection separates committed fixed costs from behaviour-based variable costs. Non-recurring expenses are never automatically repeated. Accuracy will improve as completed months accumulate.</div>`;
+    };
+
+    done=true;
+    if(typeof page!=='undefined'&&page==='forecast'&&typeof render==='function')render();
+    return true;
+  }
+  let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>400)clearInterval(timer)},20);
+})();
