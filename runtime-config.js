@@ -7,50 +7,10 @@ window.EXPENSE_APP_CONFIG={SUPABASE_URL:'https://mqsvpkbgsjsstzaeupwz.supabase.c
   const read=k=>{try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return{}}};
   const localMap=id=>Object.assign({},read('ak_expense_types_'+id),read('fintrack_types_'+id));
   function writeLocal(id,map){const s=JSON.stringify(map||{});localStorage.setItem('ak_expense_types_'+id,s);localStorage.setItem('fintrack_types_'+id,s)}
-  async function persist(map){
-    const id=uid(); if(!id||typeof sb==='undefined'||!sb)return;
-    try{await sb.from('settings').upsert({user_id:id,overrides:map||{}},{onConflict:'user_id'})}catch(e){}
-  }
-  async function syncCloud(){
-    if(syncing)return; const id=uid(); if(!id||typeof sb==='undefined'||!sb)return; syncing=true;
-    try{
-      const r=await sb.from('settings').select('overrides').eq('user_id',id).maybeSingle();
-      const remote=r?.data?.overrides&&typeof r.data.overrides==='object'?r.data.overrides:{};
-      const merged=Object.assign({},localMap(id),remote);
-      cloudOverrides=merged; writeLocal(id,merged); if(Object.keys(merged).length)persist(merged);
-    }catch(e){} finally{syncing=false}
-  }
-  function install(){
-    if(installed)return true;
-    if(typeof typeMap!=='function'||typeof saveTypeMap!=='function'||typeof saveExpense!=='function')return false;
-    const baseSave=saveExpense;
-    typeMap=function(){const id=uid();return id?Object.assign({},localMap(id),cloudOverrides):{}};
-    saveTypeMap=function(map){
-      const id=uid(); if(!id)return;
-      const merged=Object.assign({},cloudOverrides,map||{});
-      cloudOverrides=merged; writeLocal(id,merged); persist(merged);
-    };
-    saveExpense=async function(ev){
-      const chosen=document.getElementById('expenseType')?.value||'Auto Detect';
-      const editing=(typeof editId!=='undefined'&&editId)?editId:null;
-      const snap={date:document.getElementById('date')?.value||'',amount:Number(document.getElementById('amount')?.value||0),category:document.getElementById('category')?.value||'',subcategory:document.getElementById('subcategory')?.value||''};
-      await baseSave(ev);
-      if(snap.category==='Investment')return;
-      const map=typeMap();
-      if(chosen==='Auto Detect'){if(editing&&map[editing]){delete map[editing];saveTypeMap(map)}return}
-      let id=editing;
-      if(!id&&uid()&&typeof sb!=='undefined'&&sb){
-        try{
-          const q=await sb.from('expenses').select('id,created_at').eq('user_id',uid()).eq('date',snap.date).eq('amount',snap.amount).eq('category',snap.category).eq('subcategory',snap.subcategory).order('created_at',{ascending:false}).limit(1);
-          id=q.data?.[0]?.id||null;
-        }catch(e){}
-      }
-      if(id){map[id]=chosen;saveTypeMap(map);if(typeof render==='function')render()}
-    };
-    installed=true; syncCloud(); return true;
-  }
-  let tries=0; const timer=setInterval(()=>{tries++;if(install()||tries>300)clearInterval(timer)},20);
-  setInterval(()=>{if(installed)syncCloud()},15000);
+  async function persist(map){const id=uid();if(!id||typeof sb==='undefined'||!sb)return;try{await sb.from('settings').upsert({user_id:id,overrides:map||{}},{onConflict:'user_id'})}catch(e){}}
+  async function syncCloud(){if(syncing)return;const id=uid();if(!id||typeof sb==='undefined'||!sb)return;syncing=true;try{const r=await sb.from('settings').select('overrides').eq('user_id',id).maybeSingle();const remote=r?.data?.overrides&&typeof r.data.overrides==='object'?r.data.overrides:{};const merged=Object.assign({},localMap(id),remote);cloudOverrides=merged;writeLocal(id,merged);if(Object.keys(merged).length)persist(merged)}catch(e){}finally{syncing=false}}
+  function install(){if(installed)return true;if(typeof typeMap!=='function'||typeof saveTypeMap!=='function'||typeof saveExpense!=='function')return false;const baseSave=saveExpense;typeMap=function(){const id=uid();return id?Object.assign({},localMap(id),cloudOverrides):{}};saveTypeMap=function(map){const id=uid();if(!id)return;const merged=Object.assign({},cloudOverrides,map||{});cloudOverrides=merged;writeLocal(id,merged);persist(merged)};saveExpense=async function(ev){const chosen=document.getElementById('expenseType')?.value||'Auto Detect';const editing=(typeof editId!=='undefined'&&editId)?editId:null;const snap={date:document.getElementById('date')?.value||'',amount:Number(document.getElementById('amount')?.value||0),category:document.getElementById('category')?.value||'',subcategory:document.getElementById('subcategory')?.value||''};await baseSave(ev);if(snap.category==='Investment')return;const map=typeMap();if(chosen==='Auto Detect'){if(editing&&map[editing]){delete map[editing];saveTypeMap(map)}return}let id=editing;if(!id&&uid()&&typeof sb!=='undefined'&&sb){try{const q=await sb.from('expenses').select('id,created_at').eq('user_id',uid()).eq('date',snap.date).eq('amount',snap.amount).eq('category',snap.category).eq('subcategory',snap.subcategory).order('created_at',{ascending:false}).limit(1);id=q.data?.[0]?.id||null}catch(e){}}if(id){map[id]=chosen;saveTypeMap(map);if(typeof render==='function')render()}};installed=true;syncCloud();return true}
+  let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>300)clearInterval(timer)},20);setInterval(()=>{if(installed)syncCloud()},15000);
 })();
 
 /* Phase 1 Analysis: like-for-like history and projection rules. */
@@ -59,142 +19,59 @@ window.EXPENSE_APP_CONFIG={SUPABASE_URL:'https://mqsvpkbgsjsstzaeupwz.supabase.c
   function install(){
     if(done)return true;
     if(typeof forecast!=='function'||typeof monthly!=='function'||typeof typeFor!=='function'||typeof pieCard!=='function'||typeof byCat!=='function'||typeof byType!=='function'||typeof moveMonth!=='function'||typeof monthOf!=='function'||typeof monthLabel!=='function'||typeof total!=='function'||typeof ordinary!=='function')return false;
-
     const currentMonth=()=>monthOf(new Date().toISOString().slice(0,10));
     const sumType=(a,t)=>a.filter(x=>typeFor(x)===t).reduce((s,x)=>s+Number(x.amount||0),0);
     const weighted=vals=>{const w=[.5,.3,.2];let s=0,d=0;vals.forEach((v,i)=>{if(v!==null&&v!==undefined){s+=Number(v||0)*w[i];d+=w[i]}});return d?s/d:0};
-    const periodText=(cur,prev,label)=>{
-      if(prev===null||prev===undefined)return`${label} does not yet have a comparable earlier period.`;
-      if(prev===0)return cur?`${label} has recorded spending, while the comparable earlier period has no recorded expenses.`:`No spending is recorded in either comparable period.`;
-      const diff=cur-prev,pct=Math.round(Math.abs(diff)/prev*100);
-      return`${label} spending is ${money(Math.abs(diff))} (${pct}%) ${diff>=0?'higher':'lower'} than the comparable earlier period.`;
-    };
+    const periodText=(cur,prev,label)=>{if(prev===null||prev===undefined)return`${label} does not yet have a comparable earlier period.`;if(prev===0)return cur?`${label} has recorded spending, while the comparable earlier period has no recorded expenses.`:`No spending is recorded in either comparable period.`;const diff=cur-prev,pct=Math.round(Math.abs(diff)/prev*100);return`${label} spending is ${money(Math.abs(diff))} (${pct}%) ${diff>=0?'higher':'lower'} than the comparable earlier period.`};
     const monthsFrom=(year,start,count)=>Array.from({length:count},(_,i)=>year+'-'+String(start+i).padStart(2,'0'));
     const rowsFor=ms=>{const set=new Set(ms);return rows.filter(x=>ordinary(x)&&set.has(monthOf(x.date)))};
-
-    monthlyAnalysis=function(){
-      const cm=currentMonth(),m1=moveMonth(cm,-1),m2=moveMonth(cm,-2),m3=moveMonth(cm,-3);
-      const a1=monthly(m1),a2=monthly(m2),a3=monthly(m3),e1=total(a1),e2=total(a2),cats=byCat(a1),types=byType(a1);
-      let insight='';
-      if(!a1.length){
-        const cur=monthly(cm);
-        insight=`No expenses are recorded for ${monthLabel(m1)}, so a genuine previous-month comparison is not available yet.`+(cur.length?` ${monthLabel(cm)} currently has ${money(total(cur))} recorded; this will become the first completed-month baseline once the month closes.`:'');
-      }else{
-        insight=periodText(e1,a2.length?e2:null,monthLabel(m1));
-        const largest=cats[0]; if(largest)insight+=` Largest category was ${esc(largest[0])} at ${money(largest[1])}.`;
-        const controllable=(types['Non-Recurring']||0)+(types['Uncertain']||0);
-        if(controllable)insight+=` ${money(controllable)} was non-recurring or uncertain, which is the main area to review for potential savings.`;
-      }
-      const chart=a1.length?pieCard('Last month · Where did my money go?',monthLabel(m1),cats):pieCard('Current month preview · Where is my money going?',monthLabel(cm)+' · month to date',byCat(monthly(cm)));
-      return`${chart}<div class="card insight"><div class="section">What changed?</div><p>${insight}</p></div><div class="card"><div class="section">Three completed months</div><div class="tablewrap"><table class="table"><thead><tr><th>Month</th><th>Expenses</th><th>Fixed</th><th>Variable</th><th>Non-recurring</th><th>Uncertain</th></tr></thead><tbody>${[[m3,a3],[m2,a2],[m1,a1]].map(([mm,a])=>{const t=byType(a);return`<tr><td>${monthLabel(mm)}</td><td>${money(total(a))}</td><td>${money(t['Fixed Recurring']||0)}</td><td>${money(t['Variable Recurring']||0)}</td><td>${money(t['Non-Recurring']||0)}</td><td>${money(t['Uncertain']||0)}</td></tr>`}).join('')}</tbody></table></div></div>`;
-    };
-
-    quarterAnalysis=function(){
-      const d=new Date(),y=d.getFullYear(),q=Math.floor(d.getMonth()/3)+1,start=(q-1)*3+1,elapsed=d.getMonth()+1-start+1;
-      const ms=monthsFrom(y,start,elapsed),pq=q===1?4:q-1,py=q===1?y-1:y,pstart=(pq-1)*3+1,pms=monthsFrom(py,pstart,elapsed);
-      const a=rowsFor(ms),pa=rowsFor(pms),e=total(a),avg=elapsed?e/elapsed:0;
-      return`<div class="grid kpis"><div class="card"><div class="label">Q${q} ${y} spend to date</div><div class="value">${money(e)}</div></div><div class="card"><div class="label">Average / elapsed month</div><div class="value">${money(avg)}</div></div></div>${pieCard('Quarter category mix',`Q${q} ${y} · ${elapsed}/3 calendar months elapsed`,byCat(a))}<div class="card insight"><div class="section">Quarter insight</div><p>${periodText(e,pa.length?total(pa):null,`Q${q} ${y}`)} Comparison uses the same ${elapsed} month${elapsed===1?'':'s'} of the previous quarter.</p></div>`;
-    };
-
-    halfAnalysis=function(){
-      const d=new Date(),y=d.getFullYear(),h=d.getMonth()<6?1:2,start=h===1?1:7,elapsed=d.getMonth()+1-start+1;
-      const ms=monthsFrom(y,start,elapsed),py=h===1?y-1:y,pstart=h===1?7:1,pms=monthsFrom(py,pstart,elapsed);
-      const a=rowsFor(ms),pa=rowsFor(pms),e=total(a);
-      return`<div class="grid kpis"><div class="card"><div class="label">H${h} ${y} spend to date</div><div class="value">${money(e)}</div></div><div class="card"><div class="label">Average / elapsed month</div><div class="value">${money(elapsed?e/elapsed:0)}</div></div></div>${pieCard('Half-year category mix',`H${h} ${y} · ${elapsed}/6 calendar months elapsed`,byCat(a))}<div class="card insight"><div class="section">Half-year insight</div><p>${periodText(e,pa.length?total(pa):null,`H${h} ${y}`)} Comparison is like-for-like across the same number of elapsed months.</p></div>`;
-    };
-
-    annualAnalysis=function(){
-      const d=new Date(),y=d.getFullYear(),elapsed=d.getMonth()+1,ms=monthsFrom(y,1,elapsed),pms=monthsFrom(y-1,1,elapsed),a=rowsFor(ms),pa=rowsFor(pms),e=total(a);
-      return`<div class="grid kpis"><div class="card"><div class="label">${y} spend to date</div><div class="value">${money(e)}</div></div><div class="card"><div class="label">Average / elapsed month</div><div class="value">${money(elapsed?e/elapsed:0)}</div></div></div>${pieCard('Annual category mix',`${y} · Jan to ${new Date(y,elapsed-1,1).toLocaleDateString('en-IN',{month:'short'})}`,byCat(a))}<div class="card insight"><div class="section">Annual insight</div><p>${periodText(e,pa.length?total(pa):null,'Year-to-date')} The comparison uses Jan through the same calendar month last year.</p></div>`;
-    };
-
-    projectionAnalysis=function(){
-      const cm=currentMonth(),histMonths=[moveMonth(cm,-1),moveMonth(cm,-2),moveMonth(cm,-3)],hist=histMonths.map(m=>monthly(m));
-      const recentSet=new Set([cm,...histMonths.slice(0,2)]);
-      const fixedRows=rows.filter(x=>ordinary(x)&&recentSet.has(monthOf(x.date))&&typeFor(x)==='Fixed Recurring').slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||new Date(b.created_at||0)-new Date(a.created_at||0));
-      const latestFixed={};fixedRows.forEach(x=>{const k=key(x);if(!latestFixed[k])latestFixed[k]=x});
-      const fixed=Object.values(latestFixed).reduce((s,x)=>s+Number(x.amount||0),0);
-      const completed=hist.filter(a=>a.length>0);
-      const vari=completed.length?weighted(hist.map(a=>a.length?sumType(a,'Variable Recurring'):null)):sumType(monthly(cm),'Variable Recurring');
-      const unc=completed.length?weighted(hist.map(a=>a.length?sumType(a,'Uncertain'):null)):sumType(monthly(cm),'Uncertain');
-      const base=hist[0].length?hist[0]:monthly(cm),non=sumType(base,'Non-Recurring'),core=fixed+vari,upper=core+unc;
-      const confidence=completed.length>=3?'High':completed.length===2?'Moderate':completed.length===1?'Limited':'Low';
-      const items=[['Fixed Recurring',fixed],['Variable Recurring',vari],['Uncertain',unc]].filter(x=>x[1]>0);
-      let insight=`Next month core expected spend is ${money(core)}. Fixed recurring commitments contribute ${money(fixed)} and use the most recent known amount for each fixed item, including the current month, so a fixed EMI is not averaged down.`;
-      insight+=completed.length?` Variable recurring is estimated from ${completed.length} completed month${completed.length===1?'':'s'} using recent-history weighting.`:` There are no completed historical months yet, so variable and uncertain estimates use this month's recorded spending as a provisional baseline.`;
-      if(unc)insight+=` Adding uncertain spending gives a working upper projection of about ${money(upper)}.`;
-      if(non)insight+=` ${money(non)} of non-recurring spend is shown separately as a potential savings opportunity rather than assumed to repeat.`;
-      return`<div class="grid kpis"><div class="card"><div class="label">Next month core expected</div><div class="value">${money(core)}</div></div><div class="card"><div class="label">Including uncertainty</div><div class="value">${money(upper)}</div></div><div class="card"><div class="label">Potential savings opportunity</div><div class="value">${money(non)}</div></div><div class="card"><div class="label">Next 3 months core</div><div class="value">${money(core*3)}</div></div><div class="card"><div class="label">Next 12 months core</div><div class="value">${money(core*12)}</div></div><div class="card"><div class="label">Projection confidence</div><div class="value">${confidence}</div></div></div>${pieCard('Next month projection mix','Fixed + variable + uncertainty',items)}<div class="card insight"><div class="section">What to expect?</div><p>${insight}</p></div><div class="notice">Projection separates committed fixed costs from behaviour-based variable costs. Non-recurring expenses are never automatically repeated. Accuracy improves as completed months accumulate.</div>`;
-    };
-
-    done=true;
-    if(typeof page!=='undefined'&&page==='forecast'&&typeof render==='function')render();
-    return true;
+    monthlyAnalysis=function(){const cm=currentMonth(),m1=moveMonth(cm,-1),m2=moveMonth(cm,-2),m3=moveMonth(cm,-3);const a1=monthly(m1),a2=monthly(m2),a3=monthly(m3),e1=total(a1),e2=total(a2),cats=byCat(a1),types=byType(a1);let insight='';if(!a1.length){const cur=monthly(cm);insight=`No expenses are recorded for ${monthLabel(m1)}, so a genuine previous-month comparison is not available yet.`+(cur.length?` ${monthLabel(cm)} currently has ${money(total(cur))} recorded; this will become the first completed-month baseline once the month closes.`:'')}else{insight=periodText(e1,a2.length?e2:null,monthLabel(m1));const largest=cats[0];if(largest)insight+=` Largest category was ${esc(largest[0])} at ${money(largest[1])}.`;const controllable=(types['Non-Recurring']||0)+(types['Uncertain']||0);if(controllable)insight+=` ${money(controllable)} was non-recurring or uncertain, which is the main area to review for potential savings.`}const chart=a1.length?pieCard('Last month · Where did my money go?',monthLabel(m1),cats):pieCard('Current month preview · Where is my money going?',monthLabel(cm)+' · month to date',byCat(monthly(cm)));return`${chart}<div class="card insight"><div class="section">What changed?</div><p>${insight}</p></div><div class="card"><div class="section">Three completed months</div><div class="tablewrap"><table class="table"><thead><tr><th>Month</th><th>Expenses</th><th>Fixed</th><th>Variable</th><th>Non-recurring</th><th>Uncertain</th></tr></thead><tbody>${[[m3,a3],[m2,a2],[m1,a1]].map(([mm,a])=>{const t=byType(a);return`<tr><td>${monthLabel(mm)}</td><td>${money(total(a))}</td><td>${money(t['Fixed Recurring']||0)}</td><td>${money(t['Variable Recurring']||0)}</td><td>${money(t['Non-Recurring']||0)}</td><td>${money(t['Uncertain']||0)}</td></tr>`}).join('')}</tbody></table></div></div>`};
+    quarterAnalysis=function(){const d=new Date(),y=d.getFullYear(),q=Math.floor(d.getMonth()/3)+1,start=(q-1)*3+1,elapsed=d.getMonth()+1-start+1;const ms=monthsFrom(y,start,elapsed),pq=q===1?4:q-1,py=q===1?y-1:y,pstart=(pq-1)*3+1,pms=monthsFrom(py,pstart,elapsed);const a=rowsFor(ms),pa=rowsFor(pms),e=total(a),avg=elapsed?e/elapsed:0;return`<div class="grid kpis"><div class="card"><div class="label">Q${q} ${y} spend to date</div><div class="value">${money(e)}</div></div><div class="card"><div class="label">Average / elapsed month</div><div class="value">${money(avg)}</div></div></div>${pieCard('Quarter category mix',`Q${q} ${y} · ${elapsed}/3 calendar months elapsed`,byCat(a))}<div class="card insight"><div class="section">Quarter insight</div><p>${periodText(e,pa.length?total(pa):null,`Q${q} ${y}`)} Comparison uses the same ${elapsed} month${elapsed===1?'':'s'} of the previous quarter.</p></div>`};
+    halfAnalysis=function(){const d=new Date(),y=d.getFullYear(),h=d.getMonth()<6?1:2,start=h===1?1:7,elapsed=d.getMonth()+1-start+1;const ms=monthsFrom(y,start,elapsed),py=h===1?y-1:y,pstart=h===1?7:1,pms=monthsFrom(py,pstart,elapsed);const a=rowsFor(ms),pa=rowsFor(pms),e=total(a);return`<div class="grid kpis"><div class="card"><div class="label">H${h} ${y} spend to date</div><div class="value">${money(e)}</div></div><div class="card"><div class="label">Average / elapsed month</div><div class="value">${money(elapsed?e/elapsed:0)}</div></div></div>${pieCard('Half-year category mix',`H${h} ${y} · ${elapsed}/6 calendar months elapsed`,byCat(a))}<div class="card insight"><div class="section">Half-year insight</div><p>${periodText(e,pa.length?total(pa):null,`H${h} ${y}`)} Comparison is like-for-like across the same number of elapsed months.</p></div>`};
+    annualAnalysis=function(){const d=new Date(),y=d.getFullYear(),elapsed=d.getMonth()+1,ms=monthsFrom(y,1,elapsed),pms=monthsFrom(y-1,1,elapsed),a=rowsFor(ms),pa=rowsFor(pms),e=total(a);return`<div class="grid kpis"><div class="card"><div class="label">${y} spend to date</div><div class="value">${money(e)}</div></div><div class="card"><div class="label">Average / elapsed month</div><div class="value">${money(elapsed?e/elapsed:0)}</div></div></div>${pieCard('Annual category mix',`${y} · Jan to ${new Date(y,elapsed-1,1).toLocaleDateString('en-IN',{month:'short'})}`,byCat(a))}<div class="card insight"><div class="section">Annual insight</div><p>${periodText(e,pa.length?total(pa):null,'Year-to-date')} The comparison uses Jan through the same calendar month last year.</p></div>`};
+    projectionAnalysis=function(){const cm=currentMonth(),histMonths=[moveMonth(cm,-1),moveMonth(cm,-2),moveMonth(cm,-3)],hist=histMonths.map(m=>monthly(m));const recentSet=new Set([cm,...histMonths.slice(0,2)]);const fixedRows=rows.filter(x=>ordinary(x)&&recentSet.has(monthOf(x.date))&&typeFor(x)==='Fixed Recurring').slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||new Date(b.created_at||0)-new Date(a.created_at||0));const latestFixed={};fixedRows.forEach(x=>{const k=key(x);if(!latestFixed[k])latestFixed[k]=x});const fixed=Object.values(latestFixed).reduce((s,x)=>s+Number(x.amount||0),0);const completed=hist.filter(a=>a.length>0);const vari=completed.length?weighted(hist.map(a=>a.length?sumType(a,'Variable Recurring'):null)):sumType(monthly(cm),'Variable Recurring');const unc=completed.length?weighted(hist.map(a=>a.length?sumType(a,'Uncertain'):null)):sumType(monthly(cm),'Uncertain');const base=hist[0].length?hist[0]:monthly(cm),non=sumType(base,'Non-Recurring'),core=fixed+vari,upper=core+unc;const confidence=completed.length>=3?'High':completed.length===2?'Moderate':completed.length===1?'Limited':'Low';const items=[['Fixed Recurring',fixed],['Variable Recurring',vari],['Uncertain',unc]].filter(x=>x[1]>0);let insight=`Next month core expected spend is ${money(core)}. Fixed recurring commitments contribute ${money(fixed)} and use the most recent known amount for each fixed item, including the current month, so a fixed EMI is not averaged down.`;insight+=completed.length?` Variable recurring is estimated from ${completed.length} completed month${completed.length===1?'':'s'} using recent-history weighting.`:` There are no completed historical months yet, so variable and uncertain estimates use this month's recorded spending as a provisional baseline.`;if(unc)insight+=` Adding uncertain spending gives a working upper projection of about ${money(upper)}.`;if(non)insight+=` ${money(non)} of non-recurring spend is shown separately as a potential savings opportunity rather than assumed to repeat.`;return`<div class="grid kpis"><div class="card"><div class="label">Next month core expected</div><div class="value">${money(core)}</div></div><div class="card"><div class="label">Including uncertainty</div><div class="value">${money(upper)}</div></div><div class="card"><div class="label">Potential savings opportunity</div><div class="value">${money(non)}</div></div><div class="card"><div class="label">Next 3 months core</div><div class="value">${money(core*3)}</div></div><div class="card"><div class="label">Next 12 months core</div><div class="value">${money(core*12)}</div></div><div class="card"><div class="label">Projection confidence</div><div class="value">${confidence}</div></div></div>${pieCard('Next month projection mix','Fixed + variable + uncertainty',items)}<div class="card insight"><div class="section">What to expect?</div><p>${insight}</p></div><div class="notice">Projection separates committed fixed costs from behaviour-based variable costs. Non-recurring expenses are never automatically repeated. Accuracy improves as completed months accumulate.</div>`};
+    done=true;if(typeof page!=='undefined'&&page==='forecast'&&typeof render==='function')render();return true
   }
   let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>400)clearInterval(timer)},20);
 })();
 
 /* Phase 1 currency preference. Display currency only; no FX conversion. */
 (function(){
-  const C={
-    INR:['₹','Indian Rupee','en-IN'],EUR:['€','Euro','de-DE'],USD:['$','US Dollar','en-US'],GBP:['£','British Pound','en-GB'],
-    AED:['AED','UAE Dirham','en-AE'],AUD:['A$','Australian Dollar','en-AU'],CAD:['C$','Canadian Dollar','en-CA'],
-    SGD:['S$','Singapore Dollar','en-SG'],JPY:['¥','Japanese Yen','ja-JP'],CHF:['CHF','Swiss Franc','de-CH'],
-    NZD:['NZ$','New Zealand Dollar','en-NZ'],ZAR:['R','South African Rand','en-ZA']
-  };
+  const C={INR:['₹','Indian Rupee','en-IN'],EUR:['€','Euro','de-DE'],USD:['$','US Dollar','en-US'],GBP:['£','British Pound','en-GB'],AED:['AED','UAE Dirham','en-AE'],AUD:['A$','Australian Dollar','en-AU'],CAD:['C$','Canadian Dollar','en-CA'],SGD:['S$','Singapore Dollar','en-SG'],JPY:['¥','Japanese Yen','ja-JP'],CHF:['CHF','Swiss Franc','de-CH'],NZD:['NZ$','New Zealand Dollar','en-NZ'],ZAR:['R','South African Rand','en-ZA']};
   let installed=false,syncing=false;
   const uid=()=>{try{return user&&user.id?user.id:'guest'}catch(e){return'guest'}};
   const key=()=>`fintrack_currency_${uid()}`;
   const code=()=>C[localStorage.getItem(key())]?localStorage.getItem(key()):'INR';
-  function fmt(n){
-    const c=code(),v=C[c],x=Math.round(Number(n)||0);
-    try{return new Intl.NumberFormat(v[2],{style:'currency',currency:c,maximumFractionDigits:0}).format(x)}
-    catch(e){return v[0]+' '+x.toLocaleString()}
-  }
-  function card(){
-    return`<div class="card" id="fintrackCurrencyCard"><div class="section">Currency</div><div class="muted" style="margin:6px 0 12px">Choose the currency used for this FinTrack account. This changes only the currency symbol and number format; existing amounts are not converted.</div><div class="field"><label>Display currency</label><select id="fintrackCurrency" class="select" onchange="window.setFinTrackCurrency(this.value)">${Object.entries(C).map(([c,v])=>`<option value="${c}" ${c===code()?'selected':''}>${v[1]} (${c}) · ${v[0]}</option>`).join('')}</select></div></div>`;
-  }
-  async function persist(c){
-    const id=uid();if(id==='guest'||typeof sb==='undefined'||!sb)return;
-    try{
-      const r=await sb.from('settings').select('overrides').eq('user_id',id).maybeSingle();
-      const o=Object.assign({},r?.data?.overrides||{}, {__fintrack_currency:c});
-      await sb.from('settings').upsert({user_id:id,overrides:o},{onConflict:'user_id'});
-    }catch(e){}
-  }
-  async function sync(){
-    if(syncing)return;const id=uid();if(id==='guest'||typeof sb==='undefined'||!sb)return;syncing=true;
-    try{
-      const r=await sb.from('settings').select('overrides').eq('user_id',id).maybeSingle();
-      const c=r?.data?.overrides?.__fintrack_currency;
-      if(C[c]&&!localStorage.getItem(key())){localStorage.setItem(key(),c);if(typeof render==='function')render()}
-    }catch(e){}finally{syncing=false}
-  }
-  function apply(){
-    const c=code();if(c==='INR'||!document.body)return;
-    const v=C[c],walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
-    let n;
-    while((n=walker.nextNode())){
-      if(!n.nodeValue||!n.nodeValue.includes('₹'))continue;
-      const p=n.parentElement;if(p&&p.closest('#fintrackCurrencyCard'))continue;
-      let s=n.nodeValue;
-      s=s.replace(/₹\s?([\d,]+)/g,(_,num)=>fmt(Number(num.replace(/,/g,''))));
-      s=s.replace(/₹/g,v[0]);
-      n.nodeValue=s;
-    }
-  }
-  window.setFinTrackCurrency=function(c){
-    if(!C[c])return;
-    localStorage.setItem(key(),c);persist(c);
-    if(typeof render==='function')render();
-  };
+  function fmt(n){const c=code(),v=C[c],x=Math.round(Number(n)||0);try{return new Intl.NumberFormat(v[2],{style:'currency',currency:c,maximumFractionDigits:0}).format(x)}catch(e){return v[0]+' '+x.toLocaleString()}}
+  function card(){return`<div class="card" id="fintrackCurrencyCard"><div class="section">Currency</div><div class="muted" style="margin:6px 0 12px">Choose the currency used for this FinTrack account. This changes only the currency symbol and number format; existing amounts are not converted.</div><div class="field"><label>Display currency</label><select id="fintrackCurrency" class="select" onchange="window.setFinTrackCurrency(this.value)">${Object.entries(C).map(([c,v])=>`<option value="${c}" ${c===code()?'selected':''}>${v[1]} (${c}) · ${v[0]}</option>`).join('')}</select></div></div>`}
+  async function persist(c){const id=uid();if(id==='guest'||typeof sb==='undefined'||!sb)return;try{const r=await sb.from('settings').select('overrides').eq('user_id',id).maybeSingle();const o=Object.assign({},r?.data?.overrides||{}, {__fintrack_currency:c});await sb.from('settings').upsert({user_id:id,overrides:o},{onConflict:'user_id'})}catch(e){}}
+  async function sync(){if(syncing)return;const id=uid();if(id==='guest'||typeof sb==='undefined'||!sb)return;syncing=true;try{const r=await sb.from('settings').select('overrides').eq('user_id',id).maybeSingle();const c=r?.data?.overrides?.__fintrack_currency;if(C[c]&&!localStorage.getItem(key())){localStorage.setItem(key(),c);if(typeof render==='function')render()}}catch(e){}finally{syncing=false}}
+  function apply(){const c=code();if(c==='INR'||!document.body)return;const v=C[c],walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while((n=walker.nextNode())){if(!n.nodeValue||!n.nodeValue.includes('₹'))continue;const p=n.parentElement;if(p&&p.closest('#fintrackCurrencyCard'))continue;let s=n.nodeValue;s=s.replace(/₹\s?([\d,]+)/g,(_,num)=>fmt(Number(num.replace(/,/g,''))));s=s.replace(/₹/g,v[0]);n.nodeValue=s}}
+  window.setFinTrackCurrency=function(c){if(!C[c])return;localStorage.setItem(key(),c);persist(c);if(typeof render==='function')render()};
+  function install(){if(installed)return true;if(typeof settings!=='function'||typeof render!=='function')return false;const baseSettings=settings,baseRender=render;settings=function(){return card()+baseSettings.apply(this,arguments)};render=function(){const out=baseRender.apply(this,arguments);apply();return out};installed=true;sync();render();return true}
+  let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>300)clearInterval(timer)},20);
+})();
+
+/* Savings reconciliation fix: transactions on the same date are included only when created after the reconciliation snapshot. */
+(function(){
+  let installed=false;
   function install(){
     if(installed)return true;
-    if(typeof settings!=='function'||typeof render!=='function')return false;
-    const baseSettings=settings,baseRender=render;
-    settings=function(){return card()+baseSettings.apply(this,arguments)};
-    render=function(){const out=baseRender.apply(this,arguments);apply();return out};
-    installed=true;sync();render();return true;
+    if(typeof liveBalanceData!=='function'||typeof latestSnapshot!=='function'||typeof isSnapshot!=='function'||typeof isIncome!=='function'||typeof isInvestment!=='function'||typeof ordinary!=='function')return false;
+    liveBalanceData=function(){
+      const s=latestSnapshot();if(!s)return null;
+      const sd=String(s.date||''),st=new Date(s.created_at||0).getTime();
+      let inc=0,exp=0,inv=0;
+      rows.forEach(x=>{
+        if(isSnapshot(x))return;
+        const xd=String(x.date||'');
+        if(xd<sd)return;
+        if(xd===sd){const xt=new Date(x.created_at||0).getTime();if(!Number.isFinite(xt)||xt<=st)return}
+        if(isIncome(x))inc+=Number(x.amount||0);else if(isInvestment(x))inv+=Number(x.amount||0);else if(ordinary(x))exp+=Number(x.amount||0);
+      });
+      return{snapshot:s,income:inc,expenses:exp,investments:inv,balance:Number(s.amount||0)+inc-exp-inv};
+    };
+    installed=true;if(typeof render==='function')render();return true;
   }
   let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>300)clearInterval(timer)},20);
 })();
