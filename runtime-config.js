@@ -75,3 +75,22 @@ window.EXPENSE_APP_CONFIG={SUPABASE_URL:'https://mqsvpkbgsjsstzaeupwz.supabase.c
   }
   let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>300)clearInterval(timer)},20);
 })();
+
+/* Savings card: treat FinTrack as a live wallet ledger. */
+(function(){
+  let installed=false;
+  function install(){
+    if(installed)return true;
+    if(typeof savingsHomeCard!=='function'||typeof liveBalanceData!=='function'||typeof monthOf!=='function'||typeof incomeMonthly!=='function'||typeof monthly!=='function'||typeof investmentMonthly!=='function'||typeof total!=='function'||typeof money!=='function'||typeof fmtReconciled!=='function')return false;
+    savingsHomeCard=function(){
+      const d=liveBalanceData();
+      if(!d)return`<div class="card hero"><div class="label">Available Savings</div><div class="big">Set your current balance</div><p class="muted">Enter your current combined liquid savings once. FinTrack will then add logged income and deduct logged expenses and investments automatically.</p><button class="btn gold" onclick="go('settings')">Set current savings</button></div>`;
+      const cm=monthOf(new Date().toISOString().slice(0,10));
+      const monthChange=total(incomeMonthly(cm))-total(monthly(cm))-total(investmentMonthly(cm));
+      const net=d.income-d.expenses-d.investments;
+      return`<div class="card hero"><div class="row" style="align-items:flex-start;flex-wrap:wrap"><div><div class="label">Available Savings</div><div class="big">${money(d.balance)}</div><div class="muted" style="margin-top:6px">Last reconciled ${fmtReconciled(d.snapshot)}</div></div><div style="text-align:right"><div class="label">This Month Change</div><div class="value" style="color:${monthChange>=0?'var(--green)':'var(--red)'}">${monthChange>=0?'+':'−'}${money(Math.abs(monthChange))}</div></div></div><div class="grid kpis" style="margin-top:14px"><div><div class="label">Income Added</div><div class="value" style="font-size:17px;color:var(--green)">${money(d.income)}</div></div><div><div class="label">Expenses Deducted</div><div class="value" style="font-size:17px;color:var(--red)">${money(d.expenses)}</div></div><div><div class="label">Investments Deducted</div><div class="value" style="font-size:17px;color:var(--gold)">${money(d.investments)}</div></div><div><div class="label">Net Change Since Reconciliation</div><div class="value" style="font-size:17px;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'+':'−'}${money(Math.abs(net))}</div></div></div><p class="muted" style="margin-bottom:0">Available Savings = last reconciled balance + income added − expenses deducted − investments deducted.</p></div>`;
+    };
+    installed=true;if(typeof render==='function')render();return true;
+  }
+  let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>300)clearInterval(timer)},20);
+})();
