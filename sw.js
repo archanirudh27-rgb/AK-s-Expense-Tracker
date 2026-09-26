@@ -15,7 +15,7 @@ self.addEventListener('fetch',event=>{
       fetch('./v80.js?v=82',{cache:'no-store'}).then(r=>r.text()),
       fetch('./v81.js?v=82',{cache:'no-store'}).then(r=>r.text()),
       fetch('./v82.js?v=82',{cache:'no-store'}).then(r=>r.text())
-    ]).then(([base,v73,v76,v77,v78,v79,v80,v81,v82])=>new Response(base+'\\n'+v73+'\\n'+v76+'\\n'+v77+'\\n'+v78+'\\n'+v79+'\\n'+v80+'\\n'+v81+'\\n'+v82,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-store'}})));
+    ]).then(([base,v73,v76,v77,v78,v79,v80,v81,v82])=>new Response(base+'\n'+v73+'\n'+v76+'\n'+v77+'\n'+v78+'\n'+v79+'\n'+v80+'\n'+v81+'\n'+v82,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-store'}})));
     return;
   }
   event.respondWith(fetch(event.request,{cache:'no-store'}));
