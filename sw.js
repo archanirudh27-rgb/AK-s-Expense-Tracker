@@ -1,9 +1,9 @@
-/* v83: keep service worker out of app-script assembly; use normal independent script requests. */
-self.addEventListener('install',event=>{self.skipWaiting()});
-self.addEventListener('activate',event=>{
+/* v84: update controller; app assets load independently, never assembled in fetch. */
+self.addEventListener('install',function(event){self.skipWaiting()});
+self.addEventListener('activate',function(event){
   event.waitUntil(
     caches.keys()
-      .then(keys=>Promise.all(keys.filter(k=>k.startsWith('fintrack-pwa-')).map(k=>caches.delete(k))))
-      .then(()=>self.clients.claim())
+      .then(function(keys){return Promise.all(keys.filter(function(k){return k.startsWith('fintrack-pwa-')}).map(function(k){return caches.delete(k)}))})
+      .then(function(){return self.clients.claim()})
   );
 });
