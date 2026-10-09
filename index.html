@@ -7,20 +7,47 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="FinTrack">
 <title>FinTrack</title>
+<script>
+/* FinTrack v84 boot guard: surface startup failures instead of leaving a blank page. */
+(function(){
+  function safe(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+  function show(title,detail){
+    if(document.querySelector('.app')||document.getElementById('email'))return;
+    function draw(){
+      if(document.querySelector('.app')||document.getElementById('email'))return;
+      document.body.innerHTML='<div style="min-height:100vh;background:#f2f1eb;color:#171b17;font-family:system-ui,sans-serif;display:grid;place-items:center;padding:22px"><div style="width:min(100%,440px);background:#fff;border:1px solid #deddd4;border-radius:18px;padding:24px;box-shadow:0 10px 30px #171b1710"><div style="font-size:22px;font-weight:800">FinTrack could not start</div><p style="line-height:1.5">The app failed while loading. Your transactions are not being deleted. Check the technical detail below, then try reloading.</p><div style="font-size:12px;font-weight:700;margin-top:14px">Details</div><pre style="white-space:pre-wrap;overflow-wrap:anywhere;background:#f6f5f0;padding:12px;border-radius:9px;font-size:12px">'+safe(title+(detail?'\n'+detail:''))+'</pre><button onclick="location.reload()" style="border:0;border-radius:10px;padding:11px 15px;background:#171b17;color:#fff;font-weight:700">Reload FinTrack</button></div></div>';
+    }
+    if(document.body)draw();
+    else {window.__fintrackPendingBootError=[title,detail];document.addEventListener('DOMContentLoaded',function(){var e=window.__fintrackPendingBootError;if(e)show(e[0],e[1])},{once:true})}
+  }
+  window.__fintrackShowBootError=show;
+  window.addEventListener('error',function(e){
+    if(e.target&&e.target.tagName==='SCRIPT'){
+      if(/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js/.test(e.target.src||''))return;
+      show('Required JavaScript file failed to load',e.target.src||'Unknown script URL');
+    } else if(e.error||e.message) {
+      show('JavaScript startup error',e.message||String(e.error));
+    }
+  },true);
+  window.addEventListener('unhandledrejection',function(e){
+    var r=e.reason;show('Startup promise failed',r&&(r.message||String(r))||'Unknown promise error');
+  });
+})();
+</script>
 <link rel="manifest" href="./manifest.webmanifest?v=64">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./runtime-config.js?v=83"></script>
-<script src="./v73.js?v=83"></script>
-<script src="./v76.js?v=83"></script>
-<script src="./v77.js?v=83"></script>
-<script src="./v78.js?v=83"></script>
-<script src="./v79.js?v=83"></script>
-<script src="./v80.js?v=83"></script>
-<script src="./v81.js?v=83"></script>
-<script src="./v82.js?v=83"></script>
+<script src="./runtime-config.js?v=84"></script>
+<script src="./v73.js?v=84"></script>
+<script src="./v76.js?v=84"></script>
+<script src="./v77.js?v=84"></script>
+<script src="./v78.js?v=84"></script>
+<script src="./v79.js?v=84"></script>
+<script src="./v80.js?v=84"></script>
+<script src="./v81.js?v=84"></script>
+<script src="./v82.js?v=84"></script>
 <style>
 :root{--bg:#f2f1eb;--surface:#fff;--card:#f8f7f2;--ink:#171b17;--muted:#74786f;--line:#deddd4;--gold:#B56E3B;--gold2:#C48357;--green:#3f6947;--red:#9a453c;--nav:#e7e6df;--shadow:0 10px 30px rgba(22,25,21,.06)}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Poppins,system-ui,sans-serif;background:var(--bg);color:var(--ink)}body.dark{--bg:#0d100d;--surface:#111511;--card:#1a1f1a;--ink:#f3f4ef;--muted:#a4aaa1;--line:#303630;--gold:#B56E3B;--gold2:#C48357;--green:#71a67b;--red:#d4776d;--nav:#151a15;--shadow:0 12px 30px rgba(0,0,0,.2)}
@@ -93,8 +120,29 @@ function settings(){const setup=readSetup();return`<div class="card"><div class=
 function addCategory(){const n=prompt('New category name');if(!n?.trim())return;const s=readSetup();s.cats=s.cats||{};s.cats[n.trim()]=s.cats[n.trim()]||[];localStorage.setItem(setupKey(),JSON.stringify(s));render()}function addSub(){const c=prompt('Category name');if(!c?.trim())return;const sub=prompt('New sub-category');if(!sub?.trim())return;const s=readSetup();s.cats=s.cats||{};s.cats[c.trim()]=s.cats[c.trim()]||[];if(!s.cats[c.trim()].includes(sub.trim()))s.cats[c.trim()].push(sub.trim());localStorage.setItem(setupKey(),JSON.stringify(s));render()}function addPayment(){const n=prompt('New payment method');if(!n?.trim())return;const s=readSetup();s.payments=s.payments||[];if(!s.payments.includes(n.trim()))s.payments.push(n.trim());localStorage.setItem(setupKey(),JSON.stringify(s));render()}
 function download(data,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}function csv(){const vis=rows.filter(x=>!isSnapshot(x)),h='Date,Category,Subcategory,Description,Amount,Payment Mode,Type\n',b=vis.map(x=>[x.date,x.category,x.subcategory||'',x.description||'',x.amount,x.payment_mode||'',typeFor(x)].map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\n');download(h+b,'fintrack-transactions.csv','text/csv')}function jsonExport(){download(JSON.stringify(rows.filter(x=>!isSnapshot(x)),null,2),'fintrack-transactions.json','application/json')}
 function render(){if(!user)return;const body=page==='home'?home():page==='add'?add():page==='tx'?tx():page==='income'?incomePage():page==='forecast'?forecast():settings();document.body.innerHTML=`<div class="app">${header()}${nav()}<main class="main">${body}</main></div>`;setTheme(localStorage.getItem('fintrack_theme')==='dark');if(page==='tx')filterTx();if(page==='add'){fillSubs();const e=editId&&rows.find(x=>x.id===editId);if(e)$('subcategory').value=e.subcategory||''}}
-init();
-if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=83',{scope:'./',updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+async function loadSupabaseFallback(){
+  if(window.supabase&&typeof window.supabase.createClient==='function')return;
+  await new Promise(function(resolve,reject){
+    var s=document.createElement('script');
+    s.src='https://unpkg.com/@supabase/supabase-js@2';
+    s.onload=function(){if(window.supabase&&typeof window.supabase.createClient==='function')resolve();else reject(new Error('Supabase library loaded without createClient().'))};
+    s.onerror=function(){reject(new Error('Could not load Supabase JS from jsDelivr or unpkg. Check the network/content blocker and reload.'))};
+    document.head.appendChild(s);
+  });
+}
+async function startFinTrack(){
+  if('serviceWorker'in navigator){
+    navigator.serviceWorker.register('./sw.js?v=84',{scope:'./',updateViaCache:'none'})
+      .then(function(r){return r.update()})
+      .catch(function(e){console.warn('FinTrack service-worker update:',e)});
+  }
+  await loadSupabaseFallback();
+  await init();
+}
+startFinTrack().catch(function(e){
+  console.error('FinTrack startup failed:',e);
+  if(window.__fintrackShowBootError)window.__fintrackShowBootError('FinTrack startup failed',e&&e.message?e.message:String(e));
+});
 </script>
 </body>
 </html>
