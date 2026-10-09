@@ -1,4 +1,4 @@
-/* v85: update controller; app assets load independently, never assembled in fetch. */
+/* v86: update controller; app assets load independently, never assembled in fetch. */
 self.addEventListener('install',function(event){self.skipWaiting()});
 self.addEventListener('activate',function(event){
   event.waitUntil(
