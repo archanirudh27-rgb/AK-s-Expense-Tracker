@@ -12,7 +12,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./runtime-config.js?v=64"></script>
+<script src="./runtime-config.js?v=83"></script>
+<script src="./v73.js?v=83"></script>
+<script src="./v76.js?v=83"></script>
+<script src="./v77.js?v=83"></script>
+<script src="./v78.js?v=83"></script>
+<script src="./v79.js?v=83"></script>
+<script src="./v80.js?v=83"></script>
+<script src="./v81.js?v=83"></script>
+<script src="./v82.js?v=83"></script>
 <style>
 :root{--bg:#f2f1eb;--surface:#fff;--card:#f8f7f2;--ink:#171b17;--muted:#74786f;--line:#deddd4;--gold:#B56E3B;--gold2:#C48357;--green:#3f6947;--red:#9a453c;--nav:#e7e6df;--shadow:0 10px 30px rgba(22,25,21,.06)}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Poppins,system-ui,sans-serif;background:var(--bg);color:var(--ink)}body.dark{--bg:#0d100d;--surface:#111511;--card:#1a1f1a;--ink:#f3f4ef;--muted:#a4aaa1;--line:#303630;--gold:#B56E3B;--gold2:#C48357;--green:#71a67b;--red:#d4776d;--nav:#151a15;--shadow:0 12px 30px rgba(0,0,0,.2)}
@@ -86,7 +94,7 @@ function addCategory(){const n=prompt('New category name');if(!n?.trim())return;
 function download(data,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}function csv(){const vis=rows.filter(x=>!isSnapshot(x)),h='Date,Category,Subcategory,Description,Amount,Payment Mode,Type\n',b=vis.map(x=>[x.date,x.category,x.subcategory||'',x.description||'',x.amount,x.payment_mode||'',typeFor(x)].map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\n');download(h+b,'fintrack-transactions.csv','text/csv')}function jsonExport(){download(JSON.stringify(rows.filter(x=>!isSnapshot(x)),null,2),'fintrack-transactions.json','application/json')}
 function render(){if(!user)return;const body=page==='home'?home():page==='add'?add():page==='tx'?tx():page==='income'?incomePage():page==='forecast'?forecast():settings();document.body.innerHTML=`<div class="app">${header()}${nav()}<main class="main">${body}</main></div>`;setTheme(localStorage.getItem('fintrack_theme')==='dark');if(page==='tx')filterTx();if(page==='add'){fillSubs();const e=editId&&rows.find(x=>x.id===editId);if(e)$('subcategory').value=e.subcategory||''}}
 init();
-if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=64',{scope:'./',updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=83',{scope:'./',updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 </script>
 </body>
 </html>
