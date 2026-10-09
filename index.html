@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="FinTrack">
 <title>FinTrack</title>
 <script>
-/* FinTrack v85 boot guard: surface startup failures instead of leaving a blank page. */
+/* FinTrack v86 boot guard: surface startup failures instead of leaving a blank page. */
 (function(){
   function safe(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
   function show(title,detail){
@@ -34,9 +34,10 @@
   });
   window.setTimeout(function(){
     if(!document.querySelector('.app')&&!document.getElementById('email')){
-      show('Startup timed out','FinTrack loaded its page but did not finish checking the saved login session. This may be a stalled Supabase/network request. Your saved transactions are not being deleted.');
+      var stage=window.__fintrackBootStage||'Unknown startup step';
+      show('Startup timed out','Current step: '+stage+'. The app has stopped waiting rather than staying blank. This may be a stalled Supabase request or a local session-refresh issue. Your saved transactions are not being deleted.');
     }
-  },12000);
+  },15000);
 })();
 </script>
 <link rel="manifest" href="./manifest.webmanifest?v=64">
@@ -44,15 +45,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./runtime-config.js?v=85"></script>
-<script src="./v73.js?v=85"></script>
-<script src="./v76.js?v=85"></script>
-<script src="./v77.js?v=85"></script>
-<script src="./v78.js?v=85"></script>
-<script src="./v79.js?v=85"></script>
-<script src="./v80.js?v=85"></script>
-<script src="./v81.js?v=85"></script>
-<script src="./v82.js?v=85"></script>
+<script src="./runtime-config.js?v=86"></script>
+<script src="./v73.js?v=86"></script>
+<script src="./v76.js?v=86"></script>
+<script src="./v77.js?v=86"></script>
+<script src="./v78.js?v=86"></script>
+<script src="./v79.js?v=86"></script>
+<script src="./v80.js?v=86"></script>
+<script src="./v81.js?v=86"></script>
+<script src="./v82.js?v=86"></script>
 <style>
 :root{--bg:#f2f1eb;--surface:#fff;--card:#f8f7f2;--ink:#171b17;--muted:#74786f;--line:#deddd4;--gold:#B56E3B;--gold2:#C48357;--green:#3f6947;--red:#9a453c;--nav:#e7e6df;--shadow:0 10px 30px rgba(22,25,21,.06)}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Poppins,system-ui,sans-serif;background:var(--bg);color:var(--ink)}body.dark{--bg:#0d100d;--surface:#111511;--card:#1a1f1a;--ink:#f3f4ef;--muted:#a4aaa1;--line:#303630;--gold:#B56E3B;--gold2:#C48357;--green:#71a67b;--red:#d4776d;--nav:#151a15;--shadow:0 12px 30px rgba(0,0,0,.2)}
@@ -92,8 +93,52 @@ function header(){return`<div class="top"><div class="toprow"><div class="brand"
 function nav(){const items=[['home','Home'],['add','Add Expense'],['tx','Transactions'],['forecast','Analysis'],['settings','More']];const mobile=[['home','⌂','Home'],['tx','≡','Txns'],['add','＋','Add'],['forecast','↗','Analysis'],['settings','⚙','More']];return`<div class="nav">${items.map(x=>`<button class="${page===x[0]?'active':''}" onclick="go('${x[0]}')">${x[1]}</button>`).join('')}</div><div class="bottom">${mobile.map(x=>`<button class="${page===x[0]?'active':''}${x[0]==='add'?' add':''}" onclick="go('${x[0]}')"><span>${x[1]}</span><span>${x[2]}</span></button>`).join('')}</div>`}
 function auth(msg=''){document.body.innerHTML=`<div style="max-width:430px;margin:60px auto;padding:18px"><div class="card"><div class="brand"><img src="./fintrack-icon-192.svg?v=35"><div class="wordmark">Fin<span>Track</span></div></div><p class="muted">Personal Finance · Cash Flow · Planning</p>${msg?`<div class="notice err">${esc(msg)}</div>`:''}<div class="field" style="margin-top:12px"><label>Email</label><input id="email" class="input" type="email"></div><div class="field" style="margin-top:9px"><label>Password</label><input id="pass" class="input" type="password"></div><div class="actions" style="margin-top:12px"><button class="btn" onclick="login()">Sign in</button><button class="btn secondary" onclick="signup()">Create account</button></div><div id="authNote" style="margin-top:10px"></div></div></div>`;setTheme(localStorage.getItem('fintrack_theme')==='dark')}
 async function login(){const r=await sb.auth.signInWithPassword({email:$('email').value,password:$('pass').value});if(r.error)$('authNote').innerHTML=`<div class="notice err">${esc(r.error.message)}</div>`}async function signup(){const r=await sb.auth.signUp({email:$('email').value,password:$('pass').value});$('authNote').innerHTML=r.error?`<div class="notice err">${esc(r.error.message)}</div>`:'<div class="notice ok">Account created. Check your email if confirmation is required.</div>'}
-async function init(){if(!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY){auth('Supabase configuration is missing.');return}sb=supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);sb.auth.onAuthStateChange((_e,s)=>{user=s?.user||null;if(user)load();else auth()});const r=await sb.auth.getUser();if(r.data.user){user=r.data.user;load()}else auth()}
-async function load(){const r=await sb.from('expenses').select('*').order('date',{ascending:false});if(r.error){auth(r.error.message);return}rows=r.data||[];if(!month)month=monthOf(new Date().toISOString().slice(0,10));render()}
+window.__fintrackBootStage='Preparing app';
+function finTrackWithTimeout(promise,ms,label){
+  return Promise.race([
+    promise,
+    new Promise(function(_resolve,reject){
+      window.setTimeout(function(){reject(new Error(label+' did not complete within '+Math.round(ms/1000)+' seconds. Check your connection and try again.'))},ms);
+    })
+  ]);
+}
+async function init(){
+  if(!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY){auth('Supabase configuration is missing.');return}
+  window.__fintrackBootStage='Creating Supabase client';
+  sb=supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+  window.__fintrackBootStage='Checking saved login with Supabase Auth';
+  const r=await finTrackWithTimeout(sb.auth.getUser(),9000,'Supabase Auth session check');
+  if(r.error)throw new Error('Supabase Auth session check failed: '+r.error.message);
+  user=r.data?.user||null;
+  /* Important: subscribe only AFTER getUser has fully resolved.
+     Registering onAuthStateChange during auth initialization can deadlock session refresh. */
+  sb.auth.onAuthStateChange(function(event,session){
+    const previousId=user?.id||null;
+    const nextUser=session?.user||null;
+    user=nextUser;
+    if(!nextUser){
+      if(previousId||event==='SIGNED_OUT')auth();
+      return;
+    }
+    if(nextUser.id!==previousId){
+      window.setTimeout(function(){
+        load().catch(function(e){
+          if(window.__fintrackShowBootError)window.__fintrackShowBootError('Could not load transactions',e?.message||String(e));
+        });
+      },0);
+    }
+  });
+  if(user)await load();else auth();
+}
+async function load(){
+  window.__fintrackBootStage='Loading transactions from Supabase';
+  const r=await finTrackWithTimeout(sb.from('expenses').select('*').order('date',{ascending:false}),9000,'Supabase transaction request');
+  if(r.error){auth('Could not load transactions: '+r.error.message);return}
+  rows=r.data||[];
+  if(!month)month=monthOf(new Date().toISOString().slice(0,10));
+  window.__fintrackBootStage='Rendering dashboard';
+  render();
+}
 function pieCard(title,subtitle,items){const sum=items.reduce((s,x)=>s+x[1],0);if(!sum)return`<div class="card pie-card"><div class="section">${title}</div><div class="muted">${subtitle}</div><div class="empty">No expenses this month.</div></div>`;let p=0;const stops=items.map((x,i)=>{const st=p,en=p+x[1]/sum*100;p=en;return COLORS[i%COLORS.length]+' '+st.toFixed(2)+'% '+en.toFixed(2)+'%'}).join(',');const legend=items.slice(0,10).map((x,i)=>`<div class="legend"><div class="legend-left"><i class="dot" style="background:${COLORS[i%COLORS.length]}"></i><span class="legend-name">${esc(x[0])}</span></div><div class="legend-right"><b style="font-size:12px">${money(x[1])}</b><div class="muted">${Math.round(x[1]/sum*100)}%</div></div></div>`).join('');return`<div class="card pie-card"><div class="section">${title}</div><div class="muted" style="margin-top:4px">${subtitle}</div><div class="pie-grid"><div style="display:flex;justify-content:center"><div class="pie" style="background:conic-gradient(${stops})"><div class="hole"><div class="label">Total spent</div><div style="font-size:20px;font-weight:800;margin-top:3px">${money(sum)}</div></div></div></div><div>${legend}</div></div></div>`}
 function byCat(a){const o={};a.forEach(x=>o[x.category||'Miscellaneous']=(o[x.category||'Miscellaneous']||0)+Number(x.amount||0));return Object.entries(o).sort((a,b)=>b[1]-a[1])}function byType(a){const o={'Fixed Recurring':0,'Variable Recurring':0,'Non-Recurring':0,'Uncertain':0};a.forEach(x=>{const t=typeFor(x);if(o[t]===undefined)o['Non-Recurring']+=Number(x.amount||0);else o[t]+=Number(x.amount||0)});return o}
 function snapshots(){return rows.filter(isSnapshot).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||new Date(b.created_at||0)-new Date(a.created_at||0))}function latestSnapshot(){return snapshots()[0]||null}
@@ -137,7 +182,7 @@ async function loadSupabaseFallback(){
 }
 async function startFinTrack(){
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./sw.js?v=85',{scope:'./',updateViaCache:'none'})
+    navigator.serviceWorker.register('./sw.js?v=86',{scope:'./',updateViaCache:'none'})
       .then(function(r){return r.update()})
       .catch(function(e){console.warn('FinTrack service-worker update:',e)});
   }
